@@ -15,10 +15,11 @@ library(splus2R)
 library(gginnards)
 
 
-recording_path <- "C:\\Users\\Keiran\\Desktop\\Calibration Tune test.wav"
+recording_path <- "C:\\Users\\Keiran\\Desktop\\Carillon Thesis Composition\\Carillon autospeelwerk project\\Calibration recording 4.wav"
 calibration_tune_path <- "C:\\Users\\Keiran\\Desktop\\Carillon Thesis Composition\\Carillon autospeelwerk project\\Calibration Tune.abc"
 autospeelwerk_range_path <- "C:\\Users\\Keiran\\Desktop\\Carillon Thesis Composition\\Carillon autospeelwerk project\\Checklist.abc"
 output_path <- "C:\\Users\\Keiran\\Desktop\\Carillon Thesis Composition\\Carillon autospeelwerk project\\abc2xml_218\\results.abc"
+debug_output <-  "C:\\Users\\Keiran\\Desktop\\Carillon Thesis Composition\\Carillon autospeelwerk project\\abc2xml_218\\debug.csv"
 
 ## Number of notes in the clock sync header of the calibration tune
 number_clocks <- 8
@@ -28,6 +29,12 @@ number_notes <- 102
 
 ## Number of notes available in the range of teh autospeelwerk (not including repeated notes)
 number_autospeelwerk_range <- 40
+
+## Thread pitch of adjustment screws (in mm/rotation). Put NA if output in milliseconds delay is desired
+thread_pitch <- NA
+
+## Adjustment length delay constant (in seconds delay per mm of adjustment). Default is ####. This is a crude linearization.
+adjust_const <- NA
 
 ## Import recording of calibration tune
 recording <- readWave(recording_path)
@@ -54,7 +61,7 @@ contour_graph <- contour$time.contour
 contour_dataframe <- as.data.frame(contour_graph)
 
 ## Plot contour and compute peaks
-peaks_ggplot <- ggplot(contour_dataframe, aes(time,contour))+ geom_line() + stat_peaks(label.fmt = "%0.6f", ignore_threshold= 0.1, colour = "red", span = 50, strict=TRUE, geom="label", hjust = -0.1)
+peaks_ggplot <- ggplot(contour_dataframe, aes(time,contour))+ geom_line() + stat_peaks(label.fmt = "%0.6f", ignore_threshold= 0.15, colour = "red", span = 50, strict=TRUE, geom="label", hjust = -0.1)
 peaks_ggplot
 
 ## extract peaks from ggplot object
@@ -62,8 +69,9 @@ peaks_ggplot_data <- ggplot_build(peaks_ggplot)
 peak_times <- as.numeric(peaks_ggplot_data[["data"]][[2]][["label"]])
 
 
-## Sort timestamps from first to last (just in case)
+## Sort timestamps from first to last, keeping only the correct number of peaks (just in case)
 peak_times <- sort(peak_times)
+peak_times <- peak_times[1:number_notes]
 
 ## Extract clock sync from data (should be first 8 notes)
 clock_times <- peak_times[1:number_clocks]
@@ -120,10 +128,16 @@ results_ABC_file[1,] <- "T:Results"
 write.table(results_ABC_file, output_path, quote=FALSE, row.names = FALSE, col.names = FALSE, sep="\n")
 
 ## Convert ABC File to musicXML file, leave in results folder
+
+## REDO WITH PASTES TO MAKE THIS MORE ROBUST
 command <- "\"C:\\Users\\Keiran\\Desktop\\Carillon Thesis Composition\\Carillon autospeelwerk project\\abc2xml_218\\abc2xml.exe\" \"C:\\Users\\Keiran\\Desktop\\Carillon Thesis Composition\\Carillon autospeelwerk project\\abc2xml_218\\results.abc\" -o \"C:\\Users\\Keiran\\Desktop\\Carillon Thesis Composition\\Carillon autospeelwerk project\\Results\" -z replace"
 system(command)
 
+plot(total_diffs)
 ## Convert timing error to length
 
+
+## Tests (get current directory)
+write.csv(peak_times, debug_output)
 
 
